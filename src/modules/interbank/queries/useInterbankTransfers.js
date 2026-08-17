@@ -177,6 +177,36 @@ export const useCancelInterbankTransfer = () => {
   });
 };
 
+export const useReverseInterbankTransfer = () => {
+  const baseUrl = getApiBaseUrl();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload) => {
+      await api.post(`${baseUrl}/InterBank/reverse`, {
+        id: payload.id,
+        updatedBy: payload.updatedBy,
+        message: payload.message,
+      });
+      return payload;
+    },
+    onSuccess: (payload) => {
+      setTransferState(queryClient, (prev) =>
+        prev.map((transfer) =>
+          transfer.id === payload.id
+            ? {
+                ...transfer,
+                isCancelled: true,
+                isSubmit: false,
+                updatedAt: new Date().toISOString(),
+              }
+            : transfer,
+        ),
+      );
+    },
+  });
+};
+
 export const useAddInterbankTransferSnapshot = () => {
   const queryClient = useQueryClient();
   return (transfer) => {

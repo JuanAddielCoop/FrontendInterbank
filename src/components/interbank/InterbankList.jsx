@@ -6,6 +6,7 @@ import {
   Banknote,
   Loader2,
   ShieldX,
+  Undo2,
 } from "lucide-react";
 import Skeleton from "../common/Skeleton";
 import {
@@ -140,11 +141,14 @@ const InterbankRow = ({
   transfer,
   onConfirm,
   onCancel,
+  onReverse,
   showActions = true,
+  showReverse = false,
   onViewInvoice = () => {},
 }) => {
   const disabledConfirm = transfer.isSubmit || transfer.isCancelled;
   const disabledCancel = transfer.isCancelled || transfer.isSubmit;
+  const canReverse = transfer.isSubmit && !transfer.isCancelled;
   let invoiceUrl = "";
 
   const imgExtRe = /\.(jpg|jpeg|png|gif|webp|bmp)$/i;
@@ -295,6 +299,17 @@ const InterbankRow = ({
             </button>
           )}
 
+          {showReverse && canReverse && (
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-xl border border-amber-400/60 px-3 py-2 text-xs font-semibold text-amber-300 transition hover:border-amber-400 hover:text-white"
+              onClick={() => onReverse(transfer)}
+            >
+              <Undo2 className="h-4 w-4" />
+              Reversar
+            </button>
+          )}
+
           {showActions && (
             <div className="flex gap-2">
               <button
@@ -334,8 +349,10 @@ const InterbankList = ({
   isLoading,
   onConfirm,
   onCancel,
+  onReverse,
   emptyMessage = "No encontramos transferencias con esos filtros.",
   showActions = true,
+  showReverse = false,
 }) => {
   const [invoicePreview, setInvoicePreview] = useState({
     isOpen: false,
@@ -386,7 +403,9 @@ const InterbankList = ({
       transfer={transfer}
       onConfirm={onConfirm}
       onCancel={onCancel}
+      onReverse={onReverse}
       showActions={showActions}
+      showReverse={showReverse}
       onViewInvoice={openInvoiceModal}
     />
 ))}

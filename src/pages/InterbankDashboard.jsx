@@ -5,6 +5,7 @@ import InterbankList from '../components/interbank/InterbankList'
 import InterbankPagination from '../components/interbank/InterbankPagination'
 import ConfirmTransferModal from '../components/interbank/ConfirmTransferModal'
 import CancelTransferModal from '../components/interbank/CancelTransferModal'
+import ReverseTransferModal from '../components/interbank/ReverseTransferModal'
 import ErrorBanner from '../components/common/ErrorBanner'
 import Dialog from '../components/common/Dialog'
 import { INTERBANK_FALLBACK, buildInterbankStats } from '../utils/interbank'
@@ -16,6 +17,7 @@ import {
   useConfirmInterbankTransfer,
   useInterbankTransfers,
   useInterbankSummary,
+  useReverseInterbankTransfer,
 } from '../modules/interbank/queries/useInterbankTransfers'
 import { retainCompletedInterbankSnapshot } from '../modules/interbank/interbankLoader'
 import { REALTIME_STATUS_META } from '../utils/realtimeStatus'
@@ -62,6 +64,7 @@ const InterbankDashboard = () => {
   const [pageNumber, setPageNumber] = useState(1)
   const [confirmTarget, setConfirmTarget] = useState(null)
   const [cancelTarget, setCancelTarget] = useState(null)
+  const [reverseTarget, setReverseTarget] = useState(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [dialog, setDialog] = useState(DEFAULT_DIALOG)
   const [activeQuickFilter, setActiveQuickFilter] = useState('pending')
@@ -91,6 +94,7 @@ const InterbankDashboard = () => {
   }
   const confirmMutation = useConfirmInterbankTransfer()
   const cancelMutation = useCancelInterbankTransfer()
+  const reverseMutation = useReverseInterbankTransfer()
 
   const availableQuickFilters = useMemo(() => {
     if (isAdminOnly) return QUICK_FILTERS.filter((quick) => quick.id === 'pending')
@@ -268,6 +272,28 @@ const InterbankDashboard = () => {
     }
   }
 
+  const handleReverseSubmit = async (payload) => {
+    setActionLoading(true)
+    try {
+      await reverseMutation.mutateAsync(payload)
+      showDialog({
+        type: 'success',
+        title: 'Transferencia reversada',
+        message: 'El monto fue devuelto a la cuenta del socio y el flujo quedo cancelado.',
+      })
+      setReverseTarget(null)
+      applyQuickFilter('cancelled')
+    } catch (err) {
+      showDialog({
+        type: 'error',
+        title: 'No se pudo reversar',
+        message: err?.response?.data?.message ?? err?.message ?? 'Revisa los datos e intenta de nuevo.',
+      })
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   const disableNext = pageNumber * filters.pageSize >= currentCollectionSize
 
   return (
@@ -352,8 +378,10 @@ const InterbankDashboard = () => {
         isLoading={isPending}
         onConfirm={(transfer) => setConfirmTarget(transfer)}
         onCancel={(transfer) => setCancelTarget(transfer)}
+        onReverse={(transfer) => setReverseTarget(transfer)}
         emptyMessage={`No hay transferencias ${displayedMeta.label.toLowerCase()} para mostrar.`}
         showActions={activeQuickFilter === 'pending' || activeQuickFilter === 'custom'}
+        showReverse={activeQuickFilter === 'approved'}
       />
 
       <InterbankPagination
@@ -378,6 +406,14 @@ const InterbankDashboard = () => {
         isOpen={Boolean(cancelTarget)}
         onClose={() => setCancelTarget(null)}
         onSubmit={handleCancelSubmit}
+        loading={actionLoading}
+      />
+
+      <ReverseTransferModal
+        transfer={reverseTarget}
+        isOpen={Boolean(reverseTarget)}
+        onClose={() => setReverseTarget(null)}
+        onSubmit={handleReverseSubmit}
         loading={actionLoading}
       />
 
